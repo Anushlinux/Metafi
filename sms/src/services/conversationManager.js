@@ -1,4 +1,4 @@
-const { sendSMS } = require('./httpsms');
+const { sendSMS, sendSMSDevice1 } = require('./httpsms');
 const { SessionManager } = require('./sessionManager');
 
 /**
@@ -201,12 +201,12 @@ class ConversationManager {
   }
 
   /**
-   * Send message via HTTPSMS
+   * Send message via HTTPSMS using Device 1 (outgoing device)
    */
   async sendMessage(phoneNumber, content) {
     try {
-      console.log(`[ConversationManager] Sending message to ${phoneNumber}: ${content}`);
-      const result = await sendSMS(phoneNumber, content);
+      console.log(`[ConversationManager] Sending message to ${phoneNumber} via Device 1: ${content}`);
+      const result = await sendSMSDevice1(phoneNumber, content);
       return result;
     } catch (error) {
       console.error(`[ConversationManager] Error sending message to ${phoneNumber}:`, error);
