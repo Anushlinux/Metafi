@@ -11,7 +11,7 @@ const fetch = require('node-fetch');
 class ConversationTester {
   constructor(baseUrl = 'http://localhost:3000') {
     this.baseUrl = baseUrl;
-    this.testPhone = '+919324617696'; // Use your actual phone number
+    this.testPhone = '+919324617696'; 
     this.testResults = [];
   }
 
