@@ -10,7 +10,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "test:sms": "node scripts/send-test.js",
     "test:conversations": "node scripts/test-conversations.js",
-    "demo": "node scripts/demo-conversations.js"
+    "test:dual-device": "node scripts/test-dual-device.js",
+    "demo": "node scripts/demo-conversations.js",
+    "setup:webhook": "node scripts/setup-webhook.js",
+    "setup:dual-device": "node scripts/setup-dual-device.js"
   },
   "repository": {
     "type": "git",
