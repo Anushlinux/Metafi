@@ -1,12 +1,15 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
-const { sendSMS } = require('./services/httpsms');
+const ConversationManager = require('./services/conversationManager');
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize conversation manager
+const conversationManager = new ConversationManager();
 
 // Middleware
 app.use(bodyParser.json());
@@ -39,28 +42,32 @@ app.post('/sms', async (req, res) => {
     
     console.log(`[SMS Handler] Received from ${from}: ${content}`);
     
-    let reply = 'Commands: BALANCE | SEND <amt> TO <phone> | HELP';
-    
-    if (/balance/i.test(content)) {
-      reply = 'Your USDC balance is 100.00 (demo)';
-    } else {
-      const sendMatch = /^send\s+(\d+(?:\.\d+)?)\s+to\s+(\+\d{6,15})/i.exec(content);
-      if (sendMatch) {
-        const amount = sendMatch[1];
-        const recipient = sendMatch[2];
-        reply = `Sending ${amount} USDC to ${recipient}. (demo)`;
-      }
+    // Validate phone number
+    if (!from.startsWith('+')) {
+      console.log(`[SMS Handler] Invalid phone number format: ${from}`);
+      return res.status(200).json({ ok: false, error: 'Invalid phone number' });
     }
     
-    // Send reply if we have a valid phone number
-    if (from.startsWith('+')) {
+    // Handle the conversation asynchronously
+    setImmediate(async () => {
       try {
-        await sendSMS(from, reply);
-        console.log(`[SMS Handler] Reply sent to ${from}: ${reply}`);
+        const result = await conversationManager.handleReply(from, content);
+        console.log(`[SMS Handler] Conversation handled for ${from}:`, {
+          flowType: result.flowType,
+          waitingFor: result.waitingFor,
+          completed: result.completed
+        });
       } catch (error) {
-        console.error(`[SMS Handler] Failed to send reply to ${from}:`, error);
+        console.error(`[SMS Handler] Error handling conversation for ${from}:`, error);
+        
+        // Send error message to user
+        try {
+          await conversationManager.sendMessage(from, 'Sorry, I encountered an error. Please try again or type "help" for assistance.');
+        } catch (sendError) {
+          console.error(`[SMS Handler] Failed to send error message to ${from}:`, sendError);
+        }
       }
-    }
+    });
     
     res.status(200).json({ ok: true });
     
@@ -97,6 +104,82 @@ app.get('/httpsms/test', async (req, res) => {
   }
 });
 
+// Session management endpoints
+app.get('/sessions/stats', async (req, res) => {
+  try {
+    const stats = await conversationManager.getStats();
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    console.error('Error getting session stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get session statistics'
+    });
+  }
+});
+
+app.get('/sessions', async (req, res) => {
+  try {
+    const sessions = await conversationManager.getActiveSessions();
+    res.json({
+      success: true,
+      sessions
+    });
+  } catch (error) {
+    console.error('Error getting sessions:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get sessions'
+    });
+  }
+});
+
+app.delete('/sessions/:phoneNumber', async (req, res) => {
+  try {
+    const phoneNumber = req.params.phoneNumber;
+    await conversationManager.endConversation(phoneNumber);
+    res.json({
+      success: true,
+      message: `Session ended for ${phoneNumber}`
+    });
+  } catch (error) {
+    console.error('Error ending session:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to end session'
+    });
+  }
+});
+
+// Manual conversation start endpoint (for testing)
+app.post('/conversations/start', async (req, res) => {
+  try {
+    const { phoneNumber, flowType = 'help' } = req.body;
+    
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        error: 'Phone number is required'
+      });
+    }
+    
+    const result = await conversationManager.startConversation(phoneNumber, flowType);
+    res.json({
+      success: true,
+      result
+    });
+  } catch (error) {
+    console.error('Error starting conversation:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to start conversation'
+    });
+  }
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error('Error:', err);
@@ -125,6 +208,19 @@ app.listen(PORT, () => {
   } else {
     console.warn('HTTPSMS configuration incomplete - check .env file');
   }
+  
+  // Log session store configuration
+  const sessionStore = process.env.SESSION_STORE || 'memory';
+  console.log(`Session store: ${sessionStore}`);
+  
+  // Setup periodic session cleanup
+  setInterval(async () => {
+    try {
+      await conversationManager.cleanupExpiredSessions();
+    } catch (error) {
+      console.error('Error during session cleanup:', error);
+    }
+  }, 60000); // Every minute
 });
 
 module.exports = app;

@@ -8,7 +8,9 @@
     "dev": "nodemon src/server.js",
     "build": "echo \"No build step required for JavaScript\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "test:sms": "node scripts/send-test.js"
+    "test:sms": "node scripts/send-test.js",
+    "test:conversations": "node scripts/test-conversations.js",
+    "demo": "node scripts/demo-conversations.js"
   },
   "repository": {
     "type": "git",
@@ -25,7 +27,8 @@
     "body-parser": "^2.2.0",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
-    "node-fetch": "^2.7.0"
+    "node-fetch": "^2.7.0",
+    "uuid": "^9.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

@@ -1,10 +1,17 @@
 const fetch = require('node-fetch');
 
-const API_BASE = process.env.HTTPSMS_API_BASE;
-const API_KEY = process.env.HTTPSMS_API_KEY;
-const FROM = process.env.HTTPSMS_FROM_NUMBER;
-const DEVICE_ID = process.env.HTTPSMS_DEVICE_ID;
-const TIMEOUT = Number(process.env.HTTPSMS_TIMEOUT || 10000);
+/**
+ * Get HTTPSMS configuration from environment
+ */
+function getConfig() {
+  return {
+    API_BASE: process.env.HTTPSMS_API_BASE,
+    API_KEY: process.env.HTTPSMS_API_KEY,
+    FROM: process.env.HTTPSMS_FROM_NUMBER,
+    DEVICE_ID: process.env.HTTPSMS_DEVICE_ID,
+    TIMEOUT: Number(process.env.HTTPSMS_TIMEOUT || 10000)
+  };
+}
 
 /**
  * Send SMS via HTTPSMS Cloud API
@@ -16,8 +23,10 @@ async function sendSMS(to, content) {
   try {
     console.log(`[HTTPSMS] Sending SMS to ${to}: ${content}`);
     
+    const config = getConfig();
+    
     // Validate required environment variables
-    if (!API_BASE || !API_KEY || !FROM || !DEVICE_ID) {
+    if (!config.API_BASE || !config.API_KEY || !config.FROM || !config.DEVICE_ID) {
       throw new Error('Missing required HTTPSMS environment variables');
     }
     
@@ -28,22 +37,22 @@ async function sendSMS(to, content) {
     
     // Ensure phone numbers are in E.164 format
     const normalizedTo = normalizePhoneNumber(to);
-    const normalizedFrom = normalizePhoneNumber(FROM);
+    const normalizedFrom = normalizePhoneNumber(config.FROM);
     
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), TIMEOUT);
+    const timeout = setTimeout(() => controller.abort(), config.TIMEOUT);
     
-    const response = await fetch(`${API_BASE}/v1/messages/send`, {
+    const response = await fetch(`${config.API_BASE}/v1/messages/send`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': API_KEY
+        'x-api-key': config.API_KEY
       },
       body: JSON.stringify({
         from: normalizedFrom,
         to: normalizedTo,
         content: content,
-        device_id: DEVICE_ID
+        device_id: config.DEVICE_ID
       }),
       signal: controller.signal
     });
@@ -93,7 +102,9 @@ async function testConnection() {
   try {
     console.log('[HTTPSMS] Testing connection...');
     
-    if (!API_BASE || !API_KEY) {
+    const config = getConfig();
+    
+    if (!config.API_BASE || !config.API_KEY) {
       return {
         success: false,
         error: 'HTTPSMS API configuration missing'
@@ -102,12 +113,12 @@ async function testConnection() {
     
     // Test with a simple request to check API connectivity
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), TIMEOUT);
+    const timeout = setTimeout(() => controller.abort(), config.TIMEOUT);
     
-    const response = await fetch(`${API_BASE}/v1/devices`, {
+    const response = await fetch(`${config.API_BASE}/v1/devices`, {
       method: 'GET',
       headers: {
-        'x-api-key': API_KEY
+        'x-api-key': config.API_KEY
       },
       signal: controller.signal
     });
