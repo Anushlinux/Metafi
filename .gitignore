@@ -3,3 +3,4 @@ node_modules/
 sms/node_modules/
 .env
 *.env
+.wwebjs_cache/
