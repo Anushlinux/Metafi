@@ -21,8 +21,16 @@ client.on('message', async (msg) => {
         const intentResponse = await getIntent(msg.body);
         console.log('Intent response:', intentResponse);
         
+        // Clean the response by removing markdown code blocks if present
+        let cleanResponse = intentResponse.trim();
+        if (cleanResponse.startsWith('```json')) {
+            cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+        } else if (cleanResponse.startsWith('```')) {
+            cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        }
+        
         // Parse the JSON response and handle accordingly
-        const intent = JSON.parse(intentResponse);
+        const intent = JSON.parse(cleanResponse);
         
         let responseMessage = '';
         
@@ -130,7 +138,10 @@ client.on('message', async (msg) => {
         }
         
         if (responseMessage) {
-            console.log('Sending message:\n', responseMessage);
+            console.log('📱 Complete WhatsApp Response:');
+            console.log('=' .repeat(50));
+            console.log(responseMessage);
+            console.log('=' .repeat(50));
             // msg.reply(responseMessage); // Commented out for testing
         }
     } catch (error) {
@@ -142,7 +153,11 @@ client.on('message', async (msg) => {
 // Response formatting functions
 function formatTransactionHistoryResponse(result) {
     if (!result.transactions || result.transactions.length === 0) {
-        return result.message;
+        let response = result.message;
+        if (result.note) {
+            response += `\n\n⚠️ ${result.note}`;
+        }
+        return response;
     }
     
     let response = `${result.message}\n\n`;
@@ -157,6 +172,10 @@ function formatTransactionHistoryResponse(result) {
     
     if (result.transactions.length > 10) {
         response += `... and ${result.transactions.length - 10} more transactions`;
+    }
+    
+    if (result.note) {
+        response += `\n\n⚠️ ${result.note}`;
     }
     
     return response;
@@ -179,6 +198,20 @@ function formatTokenAnalyticsResponse(result) {
     response += `TVL: $${analytics.totalValueLockedUSD}\n`;
     response += `Price (ETH): ${analytics.priceInETH} ETH\n`;
     
+    // Add additional fields if available from alternative APIs
+    if (analytics.priceUSD) {
+        response += `Price (USD): $${analytics.priceUSD}\n`;
+    }
+    if (analytics.marketCap) {
+        response += `Market Cap: $${analytics.marketCap}\n`;
+    }
+    if (analytics.priceChange24h) {
+        response += `24h Change: ${analytics.priceChange24h}\n`;
+    }
+    if (analytics.note) {
+        response += `\n⚠️ ${analytics.note}\n`;
+    }
+    
     return response;
 }
 
@@ -200,6 +233,10 @@ function formatNetworkStatsResponse(result) {
         stats.topTokens.slice(0, 5).forEach((token, index) => {
             response += `${index + 1}. ${token.symbol} - Vol: $${token.volumeUSD}\n`;
         });
+    }
+    
+    if (stats.note) {
+        response += `\n⚠️ ${stats.note}`;
     }
     
     return response;
