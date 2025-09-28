@@ -4,3 +4,4 @@ sms/node_modules/
 .env
 *.env
 .wwebjs_cache/
+.DS_Store
