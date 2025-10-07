@@ -1,4 +1,4 @@
-# WhatsApp Agent
+# Metafi
 
 A Node.js SMS agent built with Express that handles incoming SMS messages and responds to commands like `balance`, `send`, and `help`. Uses HTTPSMS Cloud API for SMS communication.
 
